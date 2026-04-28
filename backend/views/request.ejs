@@ -1,0 +1,25 @@
+<h2>Request Details</h2>
+
+<p><b>ID:</b> <%= request.id %></p>
+<p><b>Status:</b> <%= request.status %></p>
+<p><b>Step:</b> <%= request.current_step %></p>
+
+<h3>Logs</h3>
+
+<table border="1" cellpadding="10">
+  <tr>
+    <th>Action</th>
+    <th>Actor</th>
+    <th>Status</th>
+    <th>Time</th>
+  </tr>
+
+  <% logs.forEach(l => { %>
+    <tr>
+      <td><%= l.action %></td>
+      <td><%= l.actor_email %></td>
+      <td><%= l.status %></td>
+      <td><%= l.created_at %></td>
+    </tr>
+  <% }) %>
+</table>    
