@@ -1,0 +1,635 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leave-request",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1792,
+        880
+      ],
+      "id": "40a9eec1-0804-498d-bc0b-dc8eeb434617",
+      "name": "Webhook",
+      "webhookId": "10e5f580-9d48-4176-9003-5eb6223a376b"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/workflow-config/{{ $json.workflowType }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1344,
+        1024
+      ],
+      "id": "38df7b89-7c60-4671-bbca-90fd243ea060",
+      "name": "Fetch Workflow Config"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/employees/{{ $json.employeeId }}/hierarchy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1344,
+        736
+      ],
+      "id": "9af9841a-70f1-4799-b002-fd3adbb10d9b",
+      "name": "Resolve Employee Hierarchy"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1120,
+        784
+      ],
+      "id": "c394904b-2802-4604-b62a-893c78ef899b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Merge').item.json.dm_reminder_days }}",
+        "unit": "days"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -672,
+        704
+      ],
+      "id": "ce1421ba-cf8d-4959-be06-eaccee1fa056",
+      "name": "Wait",
+      "webhookId": "88b48c47-8dfe-4e40-a388-90afe10eddea"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/requests/{{ $('Merge').item.json.requestId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -448,
+        704
+      ],
+      "id": "172119da-d242-4cfe-91f5-e3eaa7bb8fcc",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1050a5f-0e75-4816-b5f6-fe2b63d4e742",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        704
+      ],
+      "id": "48950845-620a-45ce-8717-5633cb8eadf8",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"requestId\":{{ $json.body.requestId }} ,\n  \"employeeId\": {{ $json.body.employeeId }},\n  \"leaveStart\":{{ $json.body.leaveStart }},\n  \"leaveEnd\":{{ $json.body.leaveEnd }},\n  \"workflowType\":{{ $json.body.workflowType }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1568,
+        880
+      ],
+      "id": "f898c5d0-c4a8-48d5-8993-9381339ef6ac",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/requests/{{ $('Merge').item.json.requestId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        512
+      ],
+      "id": "62f33d5e-7fc0-4066-a2a0-41f4aef920c5",
+      "name": "Get Status"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Merge').item.json.rm_reminder_days }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        608
+      ],
+      "id": "444db4bb-6456-4d2a-9d69-5da84d7014fa",
+      "name": "Wait1",
+      "webhookId": "eda4b2da-7ad9-4390-9681-b8358f00af67"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        704
+      ],
+      "id": "790545fc-aecf-41ee-bcf4-900ab19a9ed5",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// convert both to YYYY-MM-DD (pure date, no timezone)\nconst todayStr = new Date().toISOString().split(\"T\")[0];\nconst leaveStr = $json.leave_start.split(\"T\")[0];\n\n// convert back to Date (safe, no timezone shift)\nconst today = new Date(todayStr);\nconst leaveStart = new Date(leaveStr);\n\n// calculate diff\nconst diffTime = leaveStart.getTime() - today.getTime();\nconst diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));\n\nlet actionType = $json.current_step;\n\n// AUTO APPROVE (today or past)\nif (diffDays <= 0 && $json.status === \"pending\") {\n  actionType = \"auto_approve\";\n}\n\n// ESCALATE (within 5 days)\nelse if (diffDays <= 5 && diffDays > 0 && $json.current_step === \"DM\") {\n  actionType = \"RM\";\n}\n\nreturn {\n  json: {\n    ...$json,\n    actionType,\n    diffDays,\n    todayStr,\n    leaveStr\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        512
+      ],
+      "id": "d946a588-6b76-43dc-8e5c-7fa1d62b5e35",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:5000/api/requests/{{$json.id}}/status",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"status\": \"approved\",\n  \"step\": \"AUTO_APPROVED\",\n  \"actorEmail\": \"system\",\n  \"comment\": \"Auto approved on leave date\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        608
+      ],
+      "id": "416e83af-3027-435b-980c-2ec3bd6837a5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ \n  $('Merge').item.json.dm_email + ',' +\n  $('Merge').item.json.rm_email + ',' +\n  $('Merge').item.json.employee_email\n}}",
+        "subject": "Auto Approval mail",
+        "emailType": "text",
+        "message": "Leave request for employee is auto approved",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        800
+      ],
+      "id": "eb5d6a93-ac44-483a-b8fd-ce899f9583de",
+      "name": "Send Auto Approve Mail",
+      "webhookId": "c8e43377-cad3-447c-aa1c-6769b7018fdf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        800
+      ],
+      "id": "052fea83-c432-48c1-a05f-2def8307122a",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Merge').item.json.rm_email }}",
+        "subject": "Escalated Leave Approval Required",
+        "message": "=<p>\nEmployee requested leave from {{$json.leave_start}} to {{$json.leave_end}}\n</p>\n\n<br/>\n\n<a href=\"http://localhost:5000/api/requests/{{$json.id}}/action?action=approve&email={{encodeURIComponent($json.rm_email)}}\" \n   style=\"padding:10px 15px; background:green; color:white; text-decoration:none;\">\n   Approve\n</a>\n\n<br><br>\n\n<a href=\"http://localhost:5000/api/requests/{{ $('Merge').item.json.requestId }}/action?action=reject&email={{encodeURIComponent($json.rm_email)}}\" \n   style=\"padding:10px 15px; background:red; color:white; text-decoration:none;\">\n   Reject\n</a>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        416
+      ],
+      "id": "810a0720-75fb-4c28-98e7-bb0254a5c0be",
+      "name": "Send RM Escalation",
+      "webhookId": "33342881-2ea4-4ac2-98a8-e0081ae0c545",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Merge').item.json.dm_email }}",
+        "subject": "Leave Request Approval Needed",
+        "message": "=<h3>Leave Request</h3>\n\n<p>\nEmployee {{$json.employeeId}} requested leave <br>\nFrom: {{$json.leaveStart}} <br>\nTo: {{$json.leaveEnd}}\n</p>\n\n<br>\n\n<a href=\"http://localhost:5000/api/requests/{{$json.requestId}}/action?action=approve&email={{$json.dm_email}}\" \n   style=\"padding:10px 15px; background:green; color:white; text-decoration:none;\">\n   Approve\n</a>\n\n<br><br>\n\n<a href=\"http://localhost:5000/api/requests/{{$json.requestId}}/action?action=reject&email={{$json.dm_email}}\" \n   style=\"padding:10px 15px; background:red; color:white; text-decoration:none;\">\n   Reject\n</a>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -896,
+        800
+      ],
+      "id": "c5d7304e-2ff2-4472-8569-c8d536767662",
+      "name": "Send DM Approval Mail",
+      "webhookId": "71969772-8a8d-4668-b6e6-c4ac3b0c6ad5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.actionType }}",
+                    "rightValue": "DM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f2bf9e05-5be7-4fd0-ba18-072fbdea2e7b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a9596843-b3cc-4f38-af2a-86ea0908a938",
+                    "leftValue": "={{ $json.actionType }}",
+                    "rightValue": "RM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "cc67b38a-29ae-497c-bf4a-8f4814fe6f1f",
+                    "leftValue": "={{ $json.actionType }}",
+                    "rightValue": "auto_approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Auto Approve"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "73615a2e-1e6f-4082-b85a-82a3830ab828",
+                    "leftValue": "={{ $json.actionType }}",
+                    "rightValue": "H",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HR"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        480
+      ],
+      "id": "59e155ba-e7d6-4e99-8e80-b41642f1c3d5",
+      "name": "Switch"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Workflow Config": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Resolve Employee Hierarchy": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Send DM Approval Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Resolve Employee Hierarchy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Workflow Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Status": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Send Auto Approve Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Auto Approve Mail": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send RM Escalation": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send DM Approval Mail": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send DM Approval Mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send RM Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "82d788aa-6c6d-4620-9891-8c34a13d7509",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3817da56234e6074ee8d68d02972b2149531c93b3e12faddd8999eb190dda63b"
+  },
+  "id": "t8LHbpaLABXLoaUJ",
+  "tags": []
+}
