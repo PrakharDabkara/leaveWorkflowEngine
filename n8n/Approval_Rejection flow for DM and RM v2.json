@@ -1,0 +1,961 @@
+{
+  "name": "Approval/Rejection flow for DM and RM",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "11c6b956-fca4-4b0f-98a4-c3da740476fd",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "approved",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        864,
+        112
+      ],
+      "id": "863a3d63-ff83-43e2-bf34-ab0a2e0c3101",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        112
+      ],
+      "id": "b0c5acfe-e084-41ad-8acf-58bf9cbe36ae",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/requests/{{ $json.requestId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        16
+      ],
+      "id": "5adba279-d2ce-48a6-9c63-aaf4b18d9019",
+      "name": "Get Request"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/employees/{{ $json.employee_id }}/hierarchy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        208
+      ],
+      "id": "57f3b145-482d-45ea-b2d7-2b3706f7ea21",
+      "name": "Get Hierarchy"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        640,
+        112
+      ],
+      "id": "ade61900-7d37-43bf-9d5c-8e797246875a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n   \"requestId\":  {{ $json.body.requestId }},\n   \"action\": {{ $json.body.action }},\n   \"actorEmail\": {{ $json.body.actorEmail }},\n   \"employee_id\": {{ $json.body.employee_id }}\n   \"status\": {{ $json.body.status }}\n   \"actorRole\": {{ $json.body.actorRole }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        192,
+        112
+      ],
+      "id": "db57977f-8230-4fd4-a8ae-5741c8b44c23",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.current_step }}",
+                    "rightValue": "DM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cc6c4eb5-8f5a-46e1-ac1c-87a9f31422c6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7edf2551-7901-45fe-a43b-6099ab1cc2c4",
+                    "leftValue": "={{ $json.current_step }}",
+                    "rightValue": "RM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RM"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1088,
+        -80
+      ],
+      "id": "14a08cb9-891c-422a-a4fe-b7269dbd5888",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employee_email + ',' + $json.rm_email }}",
+        "subject": "Leave Approved by DLM",
+        "emailType": "text",
+        "message": "=Leave request has been approved by DLM. For duration of {{ new Date($json.leave_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }} to {{ new Date($json.leave_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        -176
+      ],
+      "id": "0bc6ce41-6389-45c6-bbba-5d96d43c85f7",
+      "name": "Send Approval mail by DM",
+      "webhookId": "99a582df-1fd3-4c26-b3bd-41566415fcb6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employee_email }}",
+        "subject": "Leave Approved by RM",
+        "emailType": "text",
+        "message": "=Leave request has been rejected by RM. For duration of {{ new Date($json.leave_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }} to {{ new Date($json.leave_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        16
+      ],
+      "id": "4e051994-a34a-46a3-a4d9-c35613a64caa",
+      "name": "Send Approval mail by RM",
+      "webhookId": "99a582df-1fd3-4c26-b3bd-41566415fcb6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.current_step }}",
+                    "rightValue": "DM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cc6c4eb5-8f5a-46e1-ac1c-87a9f31422c6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7edf2551-7901-45fe-a43b-6099ab1cc2c4",
+                    "leftValue": "={{ $json.current_step }}",
+                    "rightValue": "RM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RM"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1088,
+        304
+      ],
+      "id": "e2cb9ac5-ac47-490a-91ea-d22ea3a6174d",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employee_email + ',' + $json.rm_email }}",
+        "subject": "Leave Request Rejected",
+        "emailType": "text",
+        "message": "=Leave request has been rejected by DLM. For duration of {{ new Date($json.leave_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }} to {{ new Date($json.leave_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        208
+      ],
+      "id": "d0cf97e1-4765-409c-850b-d080d7544440",
+      "name": "Send rejection mail by DM",
+      "webhookId": "f24d33c3-9f48-48ab-9ced-96e4710f2cdc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dlm-action",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        912
+      ],
+      "id": "93b6decf-6519-40cb-a702-dd030f78035a",
+      "name": "Webhook1",
+      "webhookId": "afe34198-f9d1-480a-a19b-1a879530615d"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        912
+      ],
+      "id": "08e48ffb-30c4-40a3-95de-d2bfc98dc57c",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/requests/{{ $json.requestId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        816
+      ],
+      "id": "fe7b410a-5f31-4a5b-a634-855a3447bb29",
+      "name": "Get Request1"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000/api/employees/{{ $json.employee_id }}/hierarchy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        1008
+      ],
+      "id": "79dd68fb-2308-44f5-8f38-4604af297ea2",
+      "name": "Get Hierarchy1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        640,
+        912
+      ],
+      "id": "8b8e9243-2b5b-4ffe-9300-defea4cdc0f4",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n   \"requestId\":  {{ $json.body.requestId }},\n   \"action\": {{ $json.body.action }},\n   \"actorEmail\": {{ $json.body.actorEmail }},\n   \"employee_id\": {{ $json.body.employee_id }}\n   \"status\": {{ $json.body.status }}\n   \"actorRole\": {{ $json.body.actorRole }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        192,
+        912
+      ],
+      "id": "236252e3-7b1c-407e-a7f4-c65fb46b60dc",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Edit Fields1').item.json.action }}",
+                    "rightValue": "dm_approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cc6c4eb5-8f5a-46e1-ac1c-87a9f31422c6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DM Approved"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7edf2551-7901-45fe-a43b-6099ab1cc2c4",
+                    "leftValue": "={{ $('Edit Fields1').item.json.action }}",
+                    "rightValue": "approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RM Approved"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9d0aadde-8250-42b1-8695-cc15c808fd2a",
+                    "leftValue": "={{ $('Edit Fields1').item.json.action }}",
+                    "rightValue": "dm_rejected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DM Rejected"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1c391f56-92a5-451c-9f33-70deb71f1758",
+                    "leftValue": "={{ $('Edit Fields1').item.json.action }}",
+                    "rightValue": "rejected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RM rejected"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        880
+      ],
+      "id": "23a2bd81-9e92-4304-a2de-40727de98a44",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employee_email }}",
+        "subject": "Leave Approved by RM",
+        "emailType": "text",
+        "message": "=Leave request has been approved by RM. For duration of {{ new Date($json.leave_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }} to {{ new Date($json.leave_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        816
+      ],
+      "id": "fd483354-e7f5-469e-9e8e-5424123d2660",
+      "name": "Send Approval mail by RM1",
+      "webhookId": "99a582df-1fd3-4c26-b3bd-41566415fcb6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employee_email }}",
+        "subject": "Leave Request Rejected",
+        "emailType": "text",
+        "message": "=Leave request has been rejected by RM for the duration from {{ new Date($json.leave_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }} to {{ new Date($json.leave_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        400
+      ],
+      "id": "3d4635aa-3901-48fb-a058-624e35450c5c",
+      "name": "Send rejection mail by RM",
+      "webhookId": "f24d33c3-9f48-48ab-9ced-96e4710f2cdc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employee_email }}",
+        "subject": "Leave Request Rejected",
+        "emailType": "text",
+        "message": "=Leave request has been rejected by RM for the duration from {{ new Date($json.leave_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }} to {{ new Date($json.leave_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        1200
+      ],
+      "id": "6c95391e-0678-4884-ba9f-6fadb65e97ee",
+      "name": "Send rejection mail by RM2",
+      "webhookId": "f24d33c3-9f48-48ab-9ced-96e4710f2cdc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employee_email + ',' + $json.rm_email }}",
+        "subject": "Leave Request Rejected",
+        "emailType": "text",
+        "message": "=Leave request has been rejected by DLM. For duration of {{ new Date($json.leave_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }} to {{ new Date($json.leave_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        1008
+      ],
+      "id": "bfb978bc-8333-4697-9951-f589fa6d573e",
+      "name": "Send rejection mail by DM1",
+      "webhookId": "f24d33c3-9f48-48ab-9ced-96e4710f2cdc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.rm_email }}",
+        "subject": "Leave Approved by DLM",
+        "message": "=<p>\nEmployee requested leave \n<br/>\nFrom {{$json.leave_start}} \n<br/>\nTo {{$json.leave_end}}\n</p>\n\n<br/>\n\n<a href=\"http://localhost:5000/api/requests/{{$json.id}}/action?action=approve&email={{encodeURIComponent($json.rm_email)}}\" \n   style=\"padding:10px 15px; background:green; color:white; text-decoration:none;\">\n   Approve\n</a>\n\n<br><br>\n\n<a href=\"http://localhost:5000/api/requests/{{ $json.id }}/action?action=reject&email={{encodeURIComponent($json.rm_email)}}\" \n   style=\"padding:10px 15px; background:red; color:white; text-decoration:none;\">\n   Reject\n</a>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        624
+      ],
+      "id": "b4221a18-d1d3-4b5f-aa2a-dccd36eeaef2",
+      "name": "Send Approval mail by DM1",
+      "webhookId": "99a582df-1fd3-4c26-b3bd-41566415fcb6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bfWu9iaL5Kq5VX5m",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dlm-action",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        112
+      ],
+      "id": "40848ea3-c226-4c55-b215-c4e456b6d39b",
+      "name": "Webhook",
+      "webhookId": "afe34198-f9d1-480a-a19b-1a879530615d",
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Request": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Hierarchy": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Hierarchy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send Approval mail by DM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Approval mail by RM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval mail by DM": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval mail by RM": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send rejection mail by DM": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Send rejection mail by DM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send rejection mail by RM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Request1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Hierarchy1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Get Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Hierarchy1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Send Approval mail by DM1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Approval mail by RM1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send rejection mail by DM1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send rejection mail by RM2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval mail by RM1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send rejection mail by RM": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send rejection mail by RM2": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send rejection mail by DM1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval mail by DM1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "vv4uLw3lmnmhqGRQ",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "935ad644-517d-4dbb-a2a1-6100114a523f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3817da56234e6074ee8d68d02972b2149531c93b3e12faddd8999eb190dda63b"
+  },
+  "id": "ko1dXgClFyIviWel",
+  "tags": []
+}

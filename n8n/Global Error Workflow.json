@@ -1,0 +1,148 @@
+{
+  "name": "Global Error Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "943332eb-f2a6-4c7b-8cec-b4651c94735b",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "29f620b4-e851-40db-bbeb-4230d9676643",
+              "name": "=errorMessage",
+              "value": "={{ $json.execution.error.message }}",
+              "type": "string"
+            },
+            {
+              "id": "cb0ed6b2-92f9-4d99-8d06-ede80f8752ae",
+              "name": "=workflowName",
+              "value": "={{$json.workflow.name}}",
+              "type": "string"
+            },
+            {
+              "id": "9269c02b-2df3-42d6-8db6-828a8013b784",
+              "name": "=executionId",
+              "value": "={{$json.execution.id}}",
+              "type": "string"
+            },
+            {
+              "id": "cd24e56d-d72d-4a0e-8f79-90c99be50071",
+              "name": "nodeName",
+              "value": "={{ $json.execution.lastNodeExecuted }}",
+              "type": "string"
+            },
+            {
+              "id": "a903bf93-54ef-427c-a13a-d905c37e8f24",
+              "name": "stack",
+              "value": "={{ $json.execution.error.stack }}",
+              "type": "string"
+            },
+            {
+              "id": "160647fb-05e5-4251-bb71-3958180d472b",
+              "name": "fullPayload",
+              "value": "={{$json}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "6f4cd9b5-01ee-4360-b05b-faadc2fd33c7",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5000/api/logs/error",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \n\"workflowName\": \"{{$json.workflowName}}\", \n\"executionId\": \"{{$json.executionId}}\", \n\"nodeName\": \"{{$json.nodeName}}\", \n\"errorMessage\": \"{{$json.errorMessage}}\",\n\"stack\": {{ JSON.stringify($json.stack) }},\n\"payload\": {{ JSON.stringify($json.fullPayload) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "188bc5b6-9505-4016-b9d1-9d3ac2a5bb89",
+      "name": "HTTP Request",
+      "retryOnFail": false,
+      "notes": "={ \n\"workflowName\": {{$json.workflowName}}, \n\"executionId\": {{$json.executionId}}, \n\"nodeName\": {{$json.nodeName}}, \n\"errorMessage\": {{$json.errorMessage}}, \n\"stack\": {{$json.stack}}, \n\"payload\": {{$json.fullPayload}} \n}\n"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "5122b628-345f-4489-b06e-9f9a89ed785f",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "73bae278-a0cb-4441-8e00-e2bce37acfc0",
+  "meta": {
+    "instanceId": "3817da56234e6074ee8d68d02972b2149531c93b3e12faddd8999eb190dda63b"
+  },
+  "id": "vv4uLw3lmnmhqGRQ",
+  "tags": []
+}
