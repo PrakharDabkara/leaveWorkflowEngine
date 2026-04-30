@@ -19,7 +19,7 @@ exports.createRequest = async (body) => {
   );
   const employee = employeeResult.rows[0];
 
-  await axios.post("http://localhost:5678/webhook-test/leave-request", {
+  await axios.post("http://localhost:5678/webhook/leave-request", {
     requestId: request.id,
     employee_id: request.employee_id,
     employeeId: request.employee_id,
@@ -106,7 +106,7 @@ exports.updateStatus = async (id, body) => {
 //   );
 
 //   // trigger n8n
-//   await axios.post("http://localhost:5678/webhook-test/dlm-action", {
+//   await axios.post("http://localhost:5678/webhook/dlm-action", {
 //     requestId: id,
 //     employee_id: request.employee_id,
 //     action: status,
@@ -138,6 +138,7 @@ exports.handleAction = async (id, action, email) => {
   if (email === request.dm_email) actorRole = "DM";
   if (email === request.rm_email) actorRole = "RM";
 
+
   if (!actorRole) {
     throw new Error("Unauthorized actor");
   }
@@ -146,6 +147,7 @@ exports.handleAction = async (id, action, email) => {
   if (request.current_step === "COMPLETED") {
     return { success: false, message: "Already processed" };
   }
+
 
   // ===============================
   // CASE 1: DM APPROVES → MOVE TO RM
@@ -165,7 +167,7 @@ exports.handleAction = async (id, action, email) => {
       [id, "DM_APPROVED", email, "RM", "pending"]
     );
 
-    await axios.post("http://localhost:5678/webhook-test/dlm-action", {
+    await axios.post("http://localhost:5678/webhook/dlm-action", {
       requestId: id,
       employee_id: request.employee_id,
       action: "dm_approved",
@@ -193,7 +195,7 @@ exports.handleAction = async (id, action, email) => {
       [id, "APPROVED", email, "FINAL", "approved"]
     );
 
-    await axios.post("http://localhost:5678/webhook-test/dlm-action", {
+    await axios.post("http://localhost:5678/webhook/dlm-action", {
       requestId: id,
       employee_id: request.employee_id,
       action: "approved",
@@ -221,7 +223,7 @@ exports.handleAction = async (id, action, email) => {
       [id, "DM_REJECTED", email, "DM", "rejected"]
     );
 
-    await axios.post("http://localhost:5678/webhook-test/dlm-action", {
+    await axios.post("http://localhost:5678/webhook/dlm-action", {
       requestId: id,
       employee_id: request.employee_id,
       action: "dm_rejected",
@@ -249,7 +251,7 @@ exports.handleAction = async (id, action, email) => {
       [id, "REJECTED", email, "RM", "rejected"]
     );
 
-    await axios.post("http://localhost:5678/webhook-test/dlm-action", {
+    await axios.post("http://localhost:5678/webhook/dlm-action", {
       requestId: id,
       employee_id: request.employee_id,
       action: "rejected",
@@ -259,6 +261,8 @@ exports.handleAction = async (id, action, email) => {
     return { success: true };
   }
 };
+
+
 exports.getAllRequests = async () => {
   const result = await pool.query(`
     SELECT wr.*, e.name, e.email
